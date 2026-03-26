@@ -1,0 +1,14 @@
+[Desktop Entry]
+Encoding=UTF-8
+Version=1.0
+Type=Application
+Name=Automagic
+X-Nemo-Application-Type=qtquick2
+X-Nemo-Single-Instance=yes
+Icon=harbour-automagic
+Exec=sailjail -p harbour-automagic.desktop /usr/bin/sailfish-qml harbour-automagic
+
+[X-Sailjail]
+Permissions=Internet;Notifications
+OrganizationName=app.qml
+ApplicationName=automagic
