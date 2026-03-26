@@ -39,6 +39,15 @@ BuildRequires:  qt5-qttools-linguist
 %description
 Automate many things with a daemon 
 
+%if "%{?vendor}" == "chum"
+PackageName: Automagic
+Type: desktop-application
+Categories:
+ - Utility
+PackagerName: Mark Washeim (poetaster)
+Custom:
+ - Repo: https://github.com/sailfishos-chum/harbour-automagic
+%endif
 
 %prep
 %setup -q -n %{name}-%{version}
@@ -53,12 +62,25 @@ Automate many things with a daemon
 %install
 %qmake5_install
 
+#>> install post
 
-desktop-file-install --delete-original         --dir %{buildroot}%{_datadir}/applications                %{buildroot}%{_datadir}/applications/*.desktop
+#mkdir -p %{buildroot}%{_datadir}/%{name}/src
+#mkdir -p %{buildroot}%{_datadir}/%{name}/icons
+#cp -r src  %{buildroot}%{_datadir}/%{name}/src
+#cp -r qmlicons  %{buildroot}%{_datadir}/%{name}/icons
+
+desktop-file-install --delete-original        \
+   --dir %{buildroot}%{_datadir}/applications \
+   %{buildroot}%{_datadir}/applications/*.desktop
+
+# << install post
+
 
 %files
 %defattr(-,root,root,-)
 %defattr(0644,root,root,-)
 %{_datadir}/%{name}
+%{_datadir}/%{name}/src
+%{_datadir}/%{name}/icons
 %{_datadir}/applications/%{name}.desktop
 %{_datadir}/icons/hicolor/*/apps/%{name}.png

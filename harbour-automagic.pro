@@ -16,17 +16,14 @@ CONFIG += sailfishapp_qml
 
 DISTFILES += qml/harbour-automagic.qml \
     qml/cover/CoverPage.qml \
+    qml/*.qml \
     qml/pages/*.qml \
-    src/* \
-    qmlicons/* \
     rpm/harbour-automagic.changes.in \
     rpm/harbour-automagic.changes.run.in \
     rpm/harbour-automagic.spec \
     translations/*.ts \
     harbour-automagic.desktop
 
-COPIES+= src
-COPIES+= qmlicons
 
 python.path = /usr/share/$${TARGET}/src
 python.files = src/*
