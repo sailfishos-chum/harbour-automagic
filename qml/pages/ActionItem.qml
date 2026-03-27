@@ -25,6 +25,7 @@ Item {
       case "mysql_query":   return "../../icons/icon-m-db.svg"
       case "smtp": return "image://theme/icon-m-mail"
       case "imap_mark_seen": return "image://theme/icon-m-mail"
+      case "shell": return "image://theme/icon-m-tab-return"
       default:       return "image://theme/icon-m-play"
     }
   }
@@ -36,6 +37,7 @@ Item {
     height: scaledIconSize
     color: Theme.primaryColor
     opacity: 0.6
+    rotation: itemData.type == "shell" ? 180 : 0;
     anchors {
       left: parent.left
       leftMargin: Theme.paddingMedium

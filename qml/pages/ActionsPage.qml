@@ -136,8 +136,15 @@ Item {
   }
 
   RemorseItem { id: remorse }
+  
+  Component.onCompleted: {
+    app.signal_update_actions.connect(handle_update_actions)
+    python.load_data()
+  }
 
-  Component.onCompleted: load_items()
+  Component.onDestruction: {
+    app.signal_update_actions.disconnect(handle_update_actions)
+  }
 
   function load_items() {
     list_model.clear()
@@ -149,5 +156,9 @@ Item {
         "itemData": act
       })
     }
+  }
+
+  function handle_update_actions() {
+    load_items()
   }
 }

@@ -138,7 +138,14 @@ Item {
 
   RemorseItem { id: remorse }
 
-  Component.onCompleted: load_items()
+  Component.onCompleted: {
+    app.signal_update_data_sources.connect(handle_update_sources)
+    python.load_data()
+  }
+
+  Component.onDestruction: {
+    app.signal_update_data_sources.disconnect(handle_update_sources)
+  }
 
   Connections {
     target: app
@@ -155,5 +162,9 @@ Item {
         "itemData": ds
       })
     }
+  }
+
+  function handle_update_sources() {
+    load_items()
   }
 }

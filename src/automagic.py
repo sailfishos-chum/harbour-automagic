@@ -26,6 +26,15 @@ class Automagic:
       print(f"Error loading {filename}: {e}")
       return default
 
+  def _sort_items(self, items: Any) -> Any:
+    if not isinstance(items, list):
+      return items
+        
+    return sorted(
+      items, 
+      key=lambda x: str(x.get("name") or "").lower()
+    )
+
   def load_data(self) -> Dict[str, Any]:
     print('Automagic loading data')
     
@@ -35,9 +44,9 @@ class Automagic:
 
     return {
       "settings": self.loadVersioned("settings.json", {}),
-      "data_sources": self.loadVersioned("data_sources.json"),
-      "flows": self.loadVersioned("flows.json"),
-      "actions": self.loadVersioned("actions.json"),
+      "data_sources": self._sort_items(self.loadVersioned("data_sources.json")),
+      "flows": self._sort_items(self.loadVersioned("flows.json")),
+      "actions": self._sort_items(self.loadVersioned("actions.json")),
       "value_maps": self.loadVersioned("value_maps.json", {})
     }
 
@@ -390,6 +399,12 @@ class Automagic:
                   { "value": True, "label": "Yes" }
                 ] 
               }
+            ]
+          },
+          "shell": {
+            "name": "Shell",
+            "fields": [
+              { "key": "command", "label": "Command", "ui_type": "string" },
             ]
           }
         },

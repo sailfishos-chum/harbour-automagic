@@ -134,6 +134,7 @@ Dialog {
               MenuItem { text: "<"; onClicked: conditionsModel.setProperty(index, "op", "<") }
               MenuItem { text: ">="; onClicked: conditionsModel.setProperty(index, "op", ">=") }
               MenuItem { text: "<="; onClicked: conditionsModel.setProperty(index, "op", "<=") }
+              MenuItem { text: "regex"; onClicked: conditionsModel.setProperty(index, "op", "regex") }
             }
           }
 

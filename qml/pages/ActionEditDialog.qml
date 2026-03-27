@@ -48,6 +48,7 @@ Dialog {
         value: root.editedType.toUpperCase()
         menu: ContextMenu {
           MenuItem { text: "LOG"; onClicked: root.editedType = "log" }
+          MenuItem { text: "SHELL"; onClicked: root.editedType = "shell" }
           MenuItem { text: "HTTP"; onClicked: root.editedType = "http" }
           MenuItem { text: "MQTT_PUBLISH"; onClicked: root.editedType = "mqtt_publish" }
           MenuItem { text: "DBUS_METHOD"; onClicked: root.editedType = "dbus_method" }
