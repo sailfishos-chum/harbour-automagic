@@ -20,16 +20,17 @@ Item {
 
   function getSourceIcon(type) {
     switch(type) {
-      case "timer":  return "image://theme/icon-m-alarm"
-      case "mqtt":   return "../../icons/icon-m-mqtt.svg"
-      case "http":   return "../../icons/icon-m-http.svg"
-      case "dbus":   return "../../icons/icon-m-dbus.svg"
-      case "file":   return "image://theme/icon-m-file-folder"
-      case "state":  return "../../icons/icon-m-flow.svg"
-      case "sqlite": return "../../icons/icon-m-db.svg"
-      case "mysql":  return "../../icons/icon-m-db.svg"
-      case "imap":   return "image://theme/icon-m-mail"
-      default:       return "image://theme/icon-m-diagnostic"
+      case "timer":     return "image://theme/icon-m-alarm"
+      case "mqtt":      return "../../icons/icon-m-mqtt.svg"
+      case "http":      return "../../icons/icon-m-http.svg"
+      case "dbus":      return "../../icons/icon-m-dbus.svg"
+      case "file":      return "image://theme/icon-m-file-folder"
+      case "state":     return "../../icons/icon-m-flow.svg"
+      case "sqlite":    return "../../icons/icon-m-db.svg"
+      case "mysql":     return "../../icons/icon-m-db.svg"
+      case "imap":      return "image://theme/icon-m-mail"
+      case "location":  return "image://theme/icon-m-location"
+      default:          return "image://theme/icon-m-diagnostic"
     }
   }
 

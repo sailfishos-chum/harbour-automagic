@@ -15,21 +15,25 @@ Item {
 
   function getTriggerIcon(type) {
     switch(type) {
-      case "timer":  return "image://theme/icon-m-alarm"
-      case "mqtt":   return "../../icons/icon-m-mqtt.svg"
-      case "http":   return "../../icons/icon-m-http.svg"
-      case "dbus":   return "../../icons/icon-m-dbus.svg"
-      case "file":   return "image://theme/icon-m-file-folder"
-      case "state":  return "../../icons/icon-m-flow.svg"
-      case "sqlite": return "../../icons/icon-m-db.svg"
-      case "mysql":  return "../../icons/icon-m-db.svg"
-      default:       return "image://theme/icon-m-enter-accept"
+      case "timer":     return "image://theme/icon-m-alarm"
+      case "mqtt":      return "../../icons/icon-m-mqtt.svg"
+      case "http":      return "../../icons/icon-m-http.svg"
+      case "dbus":      return "../../icons/icon-m-dbus.svg"
+      case "file":      return "image://theme/icon-m-file-folder"
+      case "state":     return "../../icons/icon-m-flow.svg"
+      case "sqlite":    return "../../icons/icon-m-db.svg"
+      case "mysql":     return "../../icons/icon-m-db.svg"
+      case "location":  return "image://theme/icon-m-location"
+      default:          return "image://theme/icon-m-enter-accept"
     }
   }
 
   function getMetadataText() {
     var typeStr = itemData.type ? itemData.type.toUpperCase() : "TRIGGER"
-    if (itemData.type === "timer" && itemData.interval) return typeStr + " • Every " + itemData.interval
+    if (itemData.type === "timer" && itemData.interval) {
+      if (itemData.interval != "0s") return typeStr + " • Every " + itemData.interval
+      return typeStr + " • Once "
+    }
     if (itemData.topic) return typeStr + " • " + itemData.topic
     return typeStr
   }

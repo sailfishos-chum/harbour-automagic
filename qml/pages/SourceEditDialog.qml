@@ -65,6 +65,7 @@ Dialog {
           MenuItem { text: "TIMER"; visible: root.editedIsTrigger; onClicked: root.editedType = "timer" }
           MenuItem { text: "STATE"; onClicked: root.editedType = "state" }
           MenuItem { text: "IMAP"; onClicked: root.editedType = "imap" }
+          MenuItem { text: "LOCATION"; onClicked: root.editedType = "location" }
         }
         onValueChanged: {
           if (app.templates && app.templates.ui_schema && app.templates.ui_schema.source_types[root.editedType]) {
@@ -120,6 +121,7 @@ Dialog {
               width: parent.width - deleteFilterBtn.width
               label: "Key"
               text: model.fKey
+              inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText | Qt.ImhLatinOnly
               onTextChanged: if (focus) filterModel.setProperty(index, "fKey", text)
             }
             IconButton {
@@ -133,6 +135,7 @@ Dialog {
             width: parent.width
             label: "Value"
             text: model.fValue
+            inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText | Qt.ImhLatinOnly
             onTextChanged: if (focus) filterModel.setProperty(index, "fValue", text)
           }
           Separator { width: parent.width; color: Theme.primaryColor; opacity: 0.8 }
@@ -178,19 +181,23 @@ Dialog {
           }
           TextField {
             width: parent.width; label: "Input Variable"; text: model.tIn
+            inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText | Qt.ImhLatinOnly
             onTextChanged: if (focus) transformModel.setProperty(index, "tIn", text)
           }
           TextField {
             width: parent.width; label: "Output Variable"; text: model.tOut
+            inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText | Qt.ImhLatinOnly
             onTextChanged: if (focus) transformModel.setProperty(index, "tOut", text)
           }
           TextField {
             width: parent.width; visible: model.tType === "value_map"
+            inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText | Qt.ImhLatinOnly
             label: "Map Name"; text: model.tMap
             onTextChanged: if (focus) transformModel.setProperty(index, "tMap", text)
           }
           TextField {
             width: parent.width; visible: model.tType === "round"
+            inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText | Qt.ImhLatinOnly
             label: "Decimal Places"; text: String(model.tDecimal)
             onTextChanged: if (focus) transformModel.setProperty(index, "tDecimal", parseInt(text) || 0)
           }

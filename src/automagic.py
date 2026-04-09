@@ -527,6 +527,13 @@ class Automagic:
               { "key": "pattern", "label": "Regex Pattern", "ui_type": "string", "placeholder": "(?P<name>\\\\d+)" },
               { "key": "delimiter", "label": "Delimiter", "ui_type": "string", "placeholder": "\n", "default": "\n" }
             ]
+          },
+          "location": {
+            "name": "Location",
+            "fields": [
+              { "key": "interval", "label": "Interval", "ui_type": "string", "placeholder": "30s" },
+              { "key": "cache_ttl", "label": "Cache Time To Live", "ui_type": "string", "placeholder": "60s" }
+            ]
           }
         }
       }
