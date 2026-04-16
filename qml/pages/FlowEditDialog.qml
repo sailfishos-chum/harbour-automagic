@@ -79,8 +79,6 @@ Dialog {
       if (!item) return
 
       item.editParamsRequested.connect(function(reqCategory, reqId) {
-        console.debug("editParamsRequested - reqCategory:", reqCategory)
-
         var dialog = pageStack.push(Qt.resolvedUrl("ParamsEditDialog.qml"), {
           "templateCategory": "step_functions",
           templateCategory: reqCategory || "actions",
@@ -112,6 +110,19 @@ Dialog {
         item.paramsArray = initialData.paramsArray || []
       } else if (stepTypeString === "throttle") {
         item.paramsArray = initialData.paramsArray || []
+      } else if (stepTypeString === "string") {
+        item.paramsArray = initialData.paramsArray || []
+        item.functionId = initialData.functionId || ""
+
+        console.debug("STRING - function:", initialData.functionId)
+
+        item.changeStringRequested.connect(function() {
+          var picker = pageStack.push(Qt.resolvedUrl("StringFunctionPickerPage.qml"), { "selectedId": item.functionId })
+          picker.selected.connect(function(t, id) {
+            item.functionId = id;
+          })
+        })
+
       } else if (stepTypeString === "round") {
         item.paramsArray = initialData.paramsArray || []
       } else if (stepTypeString === "math") {
@@ -275,7 +286,19 @@ Dialog {
             }
           }
           initData.paramsArray = getPArray
-        }
+        } else if (step.type === "string") {
+          initData.functionId = step["function"] || ""
+          
+          var getPArray = []
+          if (step.params) {
+            for (var gk in step.params) {
+              var gVal = step.params[gk]
+              var gType = typeof gVal === "boolean" ? "bool" : (typeof gVal === "number" ? "number" : "string")
+              getPArray.push({"key": gk, "type": gType, "value": String(gVal)})
+            }
+          }
+          initData.paramsArray = getPArray
+        } 
 
         createStepUI(step.type, initData)
       }
@@ -287,6 +310,10 @@ Dialog {
     contentHeight: column.height
 
     PullDownMenu {
+       MenuItem {
+        text: "Add String Function"
+        onClicked: createStepUI("string", {"stepId": generateId("string"), "conditionsArray": [], "gotoTarget": "", "gotoAltTarget": "end", "paramsArray": []})
+      }
       MenuItem {
         text: "Add Throttle"
         onClicked: createStepUI("throttle", {"stepId": generateId("throttle"), "conditionsArray": [], "gotoTarget": "", "gotoAltTarget": "end", "paramsArray": [{ "key": "duration", "type": "string", "value": "1s" }, { "key": "scope", "type": "array", "value": [] }]})
@@ -428,6 +455,9 @@ Dialog {
         } else {
           stepPayload.source = uiItem.sourceId
         }
+      }
+      if (uiItem.stepType === "string") {
+        stepPayload.function = uiItem.functionId
       }
       if (uiItem.paramsArray && uiItem.paramsArray.length > 0) {
         var pMap = {}

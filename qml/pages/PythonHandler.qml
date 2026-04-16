@@ -119,6 +119,14 @@ Python {
     if (progress_state == "ready") {
       load_templates();
     }
+    if (progress_state == "connected") {
+      console.log("Daemon status: connected")
+      app.connected = true
+    }
+    if (progress_state == "disconnected") {
+      console.log("Daemon status: disconnected")
+      app.connected = false
+    }
   }
 
   function handle_success(module_id, method_id, message) {

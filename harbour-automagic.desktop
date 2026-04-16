@@ -9,6 +9,6 @@ Icon=harbour-automagic
 Exec=sailjail -p harbour-automagic.desktop /usr/bin/sailfish-qml harbour-automagic
 
 [X-Sailjail]
-Permissions=Internet;Notifications
+Permissions=Internet;Notifications;Location
 OrganizationName=app.qml
 ApplicationName=automagic

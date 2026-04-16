@@ -5,6 +5,7 @@ import socket
 import threading
 import shutil
 import secrets
+from datetime import date
 from typing import Any, Dict
 import pyotherside
 
@@ -115,13 +116,15 @@ class Automagic:
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
           s.connect(self.socket_path)
           s.sendall((json.dumps({"secret": self.secret}) + "\n").encode("utf-8"))
+
+          pyotherside.send("progress", "automagic", "listener", "connected")
           
           f = s.makefile('r', encoding='utf-8')
-          
           auth_data = f.readline()
           
           if not auth_data:
             print("Daemon closed connection during handshake. Retrying in 2s...")
+            pyotherside.send("progress", "automagic", "listener", "disconnected")
             sys.stdout.flush()
             time.sleep(2)
             continue
@@ -131,7 +134,7 @@ class Automagic:
             print(f"Listener auth failed: {auth_resp.get('error')}")
             sys.stdout.flush()
             self._listening = False
-            pyotherside.send("error", "bridge", "listener", auth_resp.get("error"))
+            pyotherside.send("error", "automagic", "listener", auth_resp.get("error"))
             return
 
           s.sendall((json.dumps({"cmd": "listen"}) + "\n").encode("utf-8"))
@@ -139,6 +142,7 @@ class Automagic:
           
           if not listen_data:
             print("Daemon closed connection during listen request. Retrying in 2s...")
+            pyotherside.send("progress", "automagic", "listener", "disconnected")
             sys.stdout.flush()
             time.sleep(2)
             continue
@@ -168,10 +172,12 @@ class Automagic:
       except Exception as e:
         if self._listening:
           print(f"Listener disconnected ({e}). Reconnecting in 2s...")
+          pyotherside.send("progress", "automagic", "listener", "disconnected")
           sys.stdout.flush()
           time.sleep(2)
           
     print("Broadcast listener thread cleanly exited.")
+    pyotherside.send("progress", "automagic", "listener", "disconnected")
     sys.stdout.flush()
 
   def _send(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -221,6 +227,8 @@ class Automagic:
     return True
 
   def get_templates(self):
+    current_year = date.today().year
+
     return {
       "version": 1,
       "ui_schema": {
@@ -270,6 +278,18 @@ class Automagic:
               ]
             ]
           },
+          "action_set_variable": {
+            "name": "Set Flow Variable",
+            "fields": [
+              { "key": "name", "label": "Variable Name", "ui_type": "string", "placeholder": "e.g., initial_value" },
+              [
+                { "key": "static", "label": "Static Value", "ui_type": "string", "placeholder": "static value" },
+                { "key": "variable", "label": "Variable Name", "ui_type": "string", "placeholder": "variable name" },
+                { "key": "template", "label": "Template", "ui_type": "string", "placeholder": "{{temp}} °C" }
+              ]
+            ]
+          },
+          
           
           "get_time": {
             "name": "System Time",
@@ -294,6 +314,45 @@ class Automagic:
             "name": "Get Internal State",
             "fields": [
               { "key": "name", "label": "State Name", "ui_type": "string", "placeholder": "e.g., temp_status" }
+            ]
+          },
+          "string_uppercase": {
+            "name": "Convert to Uppercase",
+            "fields": [
+              { "key": "in", "label": "Input Template", "ui_type": "string", "default": "" },
+              { "key": "out", "label": "Output Variable", "ui_type": "string", "default": "" }
+            ]
+          },          
+          "string_lowercase": {
+            "name": "Convert to Lowercase",
+            "fields": [
+              { "key": "in", "label": "Input Template", "ui_type": "string", "default": "" },
+              { "key": "out", "label": "Output Variable", "ui_type": "string", "default": "" }
+            ]
+          },
+          "string_trim": {
+            "name": "Trim Whitespace",
+            "fields": [
+              { "key": "in", "label": "Input Template", "ui_type": "string", "default": "" },
+              { "key": "out", "label": "Output Variable", "ui_type": "string", "default": "" }
+            ]
+          },
+          "string_replace": {
+            "name": "Text Replace",
+            "fields": [
+              { "key": "in", "label": "Input Template", "ui_type": "string", "default": "" },
+              { "key": "search", "label": "Text to Find", "ui_type": "string", "default": "" },
+              { "key": "replace", "label": "Replace With", "ui_type": "string", "default": "" },
+              { "key": "out", "label": "Output Variable", "ui_type": "string", "default": "" }
+            ]
+          },
+          "string_regex_replace": {
+            "name": "Regex Replace",
+            "fields": [
+              { "key": "in", "label": "Input Template", "ui_type": "string", "default": "" },
+              { "key": "pattern", "label": "Regex Pattern", "ui_type": "string", "default": "" },
+              { "key": "replace", "label": "Replace With", "ui_type": "string", "default": "" },
+              { "key": "out", "label": "Output Variable", "ui_type": "string", "default": "" }
             ]
           }
         },
@@ -327,7 +386,17 @@ class Automagic:
                   { "value": "DELETE", "label": "DELETE" },
                   { "value": "PATCH", "label": "PATCH" }
                 ]
-              }
+              },
+              { "key": "insecure", "label": "Ignore Certificate", "ui_type": "boolean", "default": False, "options": [
+                  { "value": False, "label": "No" },
+                  { "value": True, "label": "Yes" }
+                ] 
+              },
+              { "key": "username", "label": "Username", "ui_type": "string" },
+              { "key": "password", "label": "Password", "ui_type": "password" },
+              { "key": "content_type", "label": "Content-Type", "ui_type": "string", "default": "application/json" },
+              { "key": "payload", "label": "Payload", "ui_type": "string" },
+              { "key": "timeout", "label": "Timeout", "ui_type": "string", "placeholder": "10s" }
             ]
           },
           "mqtt_publish": {
@@ -358,7 +427,8 @@ class Automagic:
               { "key": "destination", "label": "Destination", "ui_type": "string", "placeholder": "org.freedesktop.hostname1" },
               { "key": "path", "label": "Object Path", "ui_type": "string", "placeholder": "/org/freedesktop/hostname1" },
               { "key": "interface", "label": "Interface", "ui_type": "string", "placeholder": "org.freedesktop.DBus.Properties" },
-              { "key": "method", "label": "Method", "ui_type": "string", "placeholder": "Set" }
+              { "key": "method", "label": "Method", "ui_type": "string", "placeholder": "Set" },
+              { "key": "timeout", "label": "Timeout", "ui_type": "string", "placeholder": "2s" }
             ]
           },
           "write_data": { "name": "Write Data Record", 
@@ -408,24 +478,47 @@ class Automagic:
             ]
           }
         },
-        
+
         "source_types": {
           "timer": {
             "name": "Timer",
             "fields": [
               { "key": "interval", "label": "Interval", "ui_type": "string", "placeholder": "30s" },
-              { "key": "initial_delay", "label": "Initial Delay", "ui_type": "string", "placeholder": "1s" }
-            ]
+              { "key": "initial_delay", "label": "Initial Delay", "ui_type": "string", "placeholder": "1s" },
+              { "key": "schedule_seconds", "label": "Seconds", "ui_type": "array_integer", "default": [] },
+              { "key": "schedule_minutes", "label": "Minutes", "ui_type": "array_integer", "default": [] },
+              { "key": "schedule_hours", "label": "Hours", "ui_type": "array_integer", "default": [] },
+              { "key": "schedule_weekdays", "label": "Weekdays (0=Sun, 6=Sat)", "ui_type": "array_integer", "default": [] },
+              { "key": "schedule_days", "label": "Days", "ui_type": "array_integer", "default": [] },
+              { "key": "schedule_months", "label": "Months", "ui_type": "array_integer", "default": [] },
+              { "key": "schedule_years", "label": "Years", "ui_type": "array_integer", "default": [], "placeholder": "%s,%s,%s" % (current_year-1, current_year, current_year+1) }
+            ],
+            "output_label": "Output Variables",
+            "output_hint": "trigger_time, trigger_source, epoch, hour, minute, second, date, time, weekday, weekday_name, day, month, month_name, year",
+            "trigger_mode": "always"
           },
           "mqtt": {
             "name": "MQTT Sensor",
             "fields": [
               { "key": "address", "label": "Broker Address", "ui_type": "string", "placeholder": "127.0.0.1:1883" },
               { "key": "topic", "label": "Topic", "ui_type": "string", "placeholder": "sensors/#" },
-              { "key": "username", "label": "Username", "ui_type": "string", "placeholder": "user" },
-              { "key": "password", "label": "Password", "ui_type": "string", "placeholder": "pass" },
-              { "key": "format", "label": "Payload Format", "ui_type": "string", "default": "json" }
-            ]
+              { "key": "username", "label": "Username", "ui_type": "string", "placeholder": "username" },
+              { "key": "password", "label": "Password", "ui_type": "string", "placeholder": "password" },
+              { "key": "format", "label": "Payload Format", "ui_type": "string", "default": "json", "options": [
+                  { "value": "raw", "label": "Raw String" },
+                  { "value": "json", "label": "JSON Object" },
+                  { "value": "split", "label": "Split by Delimiter" },
+                  { "value": "regex", "label": "Regex Match" },
+                  { "value": "conf", "label": "Config File" },
+                  { "value": "none", "label": "No Parsing" }
+                ]
+              },
+              { "key": "pattern", "label": "Regex Pattern", "ui_type": "string", "placeholder": "(?P<name>\\\\d+)" },
+              { "key": "delimiter", "label": "Delimiter", "ui_type": "string", "placeholder": "\n" }
+            ],
+            "output_label": "Output",
+            "output_hint": "_topic | arg0-n | json keys | config file keys",
+            "trigger_mode": "always"
           },
           "http": {
             "name": "HTTP Request",
@@ -439,7 +532,17 @@ class Automagic:
                   { "value": "PATCH", "label": "PATCH" }
                 ] 
               },
-              { "key": "format", "label": "Payload Format", "ui_type": "string", "default": "json", "options": [
+              { "key": "insecure", "label": "Ignore Certificate", "ui_type": "boolean", "default": False, "options": [
+                  { "value": False, "label": "No" },
+                  { "value": True, "label": "Yes" }
+                ] 
+              },
+              { "key": "username", "label": "Username", "ui_type": "string" },
+              { "key": "password", "label": "Password", "ui_type": "password" },
+              { "key": "content_type", "label": "Content-Type", "ui_type": "string", "default": "application/json" },
+              { "key": "payload", "label": "Request Payload", "ui_type": "string" },
+              { "key": "timeout", "label": "Timeout", "ui_type": "string", "placeholder": "10s" },
+              { "key": "format", "label": "Result Payload Format", "ui_type": "string", "default": "json", "options": [
                   { "value": "raw", "label": "Raw String" },
                   { "value": "json", "label": "JSON Object" },
                   { "value": "split", "label": "Split by Delimiter" },
@@ -450,7 +553,10 @@ class Automagic:
               },
               { "key": "pattern", "label": "Regex Pattern", "ui_type": "string", "placeholder": "(?P<name>\\\\d+)" },
               { "key": "delimiter", "label": "Delimiter", "ui_type": "string", "placeholder": "\n" }
-            ]
+            ],
+            "output_label": "Output",
+            "output_hint": "arg0-n | json keys | config file keys",
+            "trigger_mode": "never"
           },
           "dbus": {
             "name": "DBus Connection",
@@ -461,7 +567,10 @@ class Automagic:
               { "key": "interface", "label": "Interface", "ui_type": "string", "placeholder": "org.freedesktop.DBus.Properties" },
               { "key": "method", "label": "Method", "ui_type": "string", "placeholder": "Get" },
               { "key": "signal", "label": "Signal", "ui_type": "string", "placeholder": "PropertiesChanged" }
-            ]
+            ],
+            "output_label": "Output",
+            "output_hint": "arg0-n",
+            "trigger_mode": "optional"
           },
           "file": {
             "name": "File",
@@ -478,14 +587,20 @@ class Automagic:
               },
               { "key": "pattern", "label": "Regex Pattern", "ui_type": "string", "placeholder": "(?P<name>\\\\d+)" },
               { "key": "delimiter", "label": "Delimiter", "ui_type": "string", "placeholder": "\n" }
-            ]
+            ],
+            "output_label": "Output",
+            "output_hint": "exists, size, base_name, is_directory, modify_time, mode, permissions | arg0-n | json keys | config file keys",
+            "trigger_mode": "optional"
           },
           "sqlite": {
             "name": "SQLite",
             "fields": [
               { "key": "path", "label": "Database Path", "ui_type": "string", "placeholder": "/home/defaultuser/auto.db" },
               { "key": "query", "label": "SELECT Query", "ui_type": "string", "placeholder": "SELECT sold, total FROM phone_stats LIMIT 1"}
-            ]
+            ],
+            "output_label": "Output",
+            "output_hint": "column names",
+            "trigger_mode": "never"
           },
           "mysql": {
             "name": "MySQL",
@@ -495,13 +610,19 @@ class Automagic:
               { "key": "username", "label": "Username", "ui_type": "string", "placeholder": "username" },
               { "key": "password", "label": "Password", "ui_type": "string", "placeholder": "password" },
               { "key": "query", "label": "SQL Query", "ui_type": "string", "placeholder": "INSERT INTO..."  }
-            ]
+            ],
+            "output_label": "Output",
+            "output_hint": "column names",
+            "trigger_mode": "never"
           },
           "state": {
             "name": "State",
             "fields": [
 
-            ]
+            ],
+            "output_label": "Output Variables",
+            "output_hint": "state_key, state_value",
+            "trigger_mode": "optional"
           },
           "imap": {
             "name": "IMAP Inbox",
@@ -526,14 +647,20 @@ class Automagic:
               },
               { "key": "pattern", "label": "Regex Pattern", "ui_type": "string", "placeholder": "(?P<name>\\\\d+)" },
               { "key": "delimiter", "label": "Delimiter", "ui_type": "string", "placeholder": "\n", "default": "\n" }
-            ]
+            ],
+            "output_label": "Output",
+            "output_hint": "has_message, uid, subject, date, message_id, remaining, from_email, from_name, to_email, to_name | text/plain/arg0-n | text/html/arg0-n | ...",
+            "trigger_mode": "never"
           },
           "location": {
             "name": "Location",
             "fields": [
               { "key": "interval", "label": "Interval", "ui_type": "string", "placeholder": "30s" },
               { "key": "cache_ttl", "label": "Cache Time To Live", "ui_type": "string", "placeholder": "60s" }
-            ]
+            ],
+            "output_label": "Output Variables",
+            "output_hint": "latitude, longitude, altitude, accuracy, vertical_accuracy, timestamp, provider",
+            "trigger_mode": "optional"
           }
         }
       }

@@ -47,8 +47,30 @@ Dialog {
 
       TextSwitch {
         text: "Act as Trigger"
-        checked: root.editedIsTrigger
-        onCheckedChanged: root.editedIsTrigger = checked
+        
+        checked: {
+          if (root.currentTemplate) {
+            if (root.currentTemplate.trigger_mode === "always") return true;
+            if (root.currentTemplate.trigger_mode === "never") return false;
+          }
+          return root.editedIsTrigger;
+        }
+        
+        enabled: !root.currentTemplate || (root.currentTemplate.trigger_mode !== "always" && root.currentTemplate.trigger_mode !== "never")
+        
+        description: {
+          if (!enabled && root.currentTemplate) {
+            if (root.currentTemplate.trigger_mode === "always") return "This source type must be a trigger."
+            if (root.currentTemplate.trigger_mode === "never") return "This source type cannot be a trigger."
+          }
+          return ""
+        }
+
+        onCheckedChanged: {
+          if (enabled) {
+            root.editedIsTrigger = checked
+          }
+        }
       }
 
       ComboBox {
@@ -62,7 +84,7 @@ Dialog {
           MenuItem { text: "MQTT"; onClicked: root.editedType = "mqtt" }
           MenuItem { text: "HTTP"; onClicked: root.editedType = "http" }
           MenuItem { text: "DBUS"; onClicked: root.editedType = "dbus" }
-          MenuItem { text: "TIMER"; visible: root.editedIsTrigger; onClicked: root.editedType = "timer" }
+          MenuItem { text: "TIMER"; onClicked: root.editedType = "timer" }
           MenuItem { text: "STATE"; onClicked: root.editedType = "state" }
           MenuItem { text: "IMAP"; onClicked: root.editedType = "imap" }
           MenuItem { text: "LOCATION"; onClicked: root.editedType = "location" }
@@ -110,7 +132,22 @@ Dialog {
         argsModel: argsModel
       }
 
+      SectionHeader { 
+        text: String(currentTemplate.output_label)
+        visible: Boolean(currentTemplate.output_label) 
+      }
+
+      Label {
+        width: parent.width - Theme.paddingMedium
+        text: Boolean(currentTemplate.output_hint) ? String(currentTemplate.output_hint) : ""
+        font.pixelSize: Theme.fontSizeExtraSmall
+        wrapMode: Text.WordWrap
+        color: Theme.secondaryColor
+        x: Theme.paddingMedium
+      }
+
       SectionHeader { text: "Filters" }
+
       Repeater {
         model: filterModel
         delegate: Column {
@@ -141,6 +178,7 @@ Dialog {
           Separator { width: parent.width; color: Theme.primaryColor; opacity: 0.8 }
         }
       }
+
       Button {
         text: "Add Filter"
         anchors.horizontalCenter: parent.horizontalCenter
@@ -165,6 +203,11 @@ Dialog {
                 MenuItem { text: "value_map"; onClicked: transformModel.setProperty(index, "tType", "value_map") }
                 MenuItem { text: "math"; onClicked: transformModel.setProperty(index, "tType", "math") }
                 MenuItem { text: "round"; onClicked: transformModel.setProperty(index, "tType", "round") }
+                MenuItem { text: "uppercase"; onClicked: transformModel.setProperty(index, "tType", "uppercase") }
+                MenuItem { text: "lowercase"; onClicked: transformModel.setProperty(index, "tType", "lowercase") }
+                MenuItem { text: "trim"; onClicked: transformModel.setProperty(index, "tType", "trim") }
+                MenuItem { text: "replace"; onClicked: transformModel.setProperty(index, "tType", "replace") }
+                MenuItem { text: "regex_replace"; onClicked: transformModel.setProperty(index, "tType", "regex_replace") }
               }
             }
             TextSwitch {
@@ -200,6 +243,30 @@ Dialog {
             inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText | Qt.ImhLatinOnly
             label: "Decimal Places"; text: String(model.tDecimal)
             onTextChanged: if (focus) transformModel.setProperty(index, "tDecimal", parseInt(text) || 0)
+          }
+          TextField {
+            width: parent.width
+            visible: model.tType === "replace"
+            inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText | Qt.ImhLatinOnly
+            label: "Search"
+            text: model.tSearch
+            onTextChanged: if (focus) transformModel.setProperty(index, "tSearch", text)
+          }
+          TextField {
+            width: parent.width
+            visible: model.tType === "regex_replace"
+            inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText | Qt.ImhLatinOnly
+            label: "Pattern"
+            text: model.tPattern
+            onTextChanged: if (focus) transformModel.setProperty(index, "tPattern", text)
+          }
+          TextField {
+            width: parent.width
+            visible: model.tType === "replace" || model.tType === "regex_replace"
+            inputMethodHints: Qt.ImhNoAutoUppercase | Qt.ImhNoPredictiveText | Qt.ImhLatinOnly
+            label: "Replace"
+            text: model.tReplace
+            onTextChanged: if (focus) transformModel.setProperty(index, "tReplace", text)
           }
           Separator { width: parent.width; color: Theme.primaryColor; opacity: 0.8 }
         }
@@ -265,7 +332,10 @@ Dialog {
           "tOut": tr.out || "",
           "tMap": tr.map || "",
           "tOptional": tr.optional || false,
-          "tDecimal": tr.decimal_places || 0
+          "tDecimal": tr.decimal_places || 0,
+          "tReplace": tr.replace || "",
+          "tSearch": tr.search || "",
+          "tPattern": tr.pattern || ""
         })
       }
     }
@@ -286,22 +356,54 @@ Dialog {
   onAccepted: {
     sourceData.name = root.editedName
     sourceData.type = root.editedType
-    sourceData.trigger = root.editedIsTrigger
     sourceData.enabled = root.editedEnabled
+
+    if (root.currentTemplate && root.currentTemplate.trigger_mode === "always") {
+      sourceData.trigger = true
+    } else if (root.currentTemplate && root.currentTemplate.trigger_mode === "never") {
+      sourceData.trigger = false
+    } else {
+      sourceData.trigger = root.editedIsTrigger
+    }
 
     for (var k in root.formValues) {
       var val = root.formValues[k]
       
-      // Ensure booleans remain strict booleans so JSON stringify outputs false instead of "false"
       if (root.currentTemplate) {
         for (var f = 0; f < root.currentTemplate.fields.length; f++) {
-          if (root.currentTemplate.fields[f].key === k && root.currentTemplate.fields[f].ui_type === "boolean") {
-            val = (val === true || String(val).toLowerCase() === "true")
+          if (root.currentTemplate.fields[f].key === k) {
+            var uiType = root.currentTemplate.fields[f].ui_type
+            
+            if (uiType === "boolean") {
+              val = (val === true || String(val).toLowerCase() === "true")
+            } else if (uiType === "array" || uiType === "array_integer") {
+              var arr = []
+              var strVal = Array.isArray(val) ? val.join(",") : String(val || "")
+              var parts = strVal.split(",")
+              
+              for (var p = 0; p < parts.length; p++) {
+                var trimmed = parts[p].trim()
+                if (trimmed !== "") {
+                  if (uiType === "array_integer") {
+                    var pInt = parseInt(trimmed, 10)
+                    if (!isNaN(pInt)) arr.push(pInt)
+                  } else {
+                    arr.push(trimmed)
+                  }
+                }
+              }
+              val = arr.length > 0 ? arr : undefined
+            }
             break
           }
         }
       }
-      sourceData[k] = val
+
+      if (val !== undefined) {
+        sourceData[k] = val
+      } else {
+        delete sourceData[k]
+      }
     }
 
     if (root.editedType === "dbus") {
@@ -333,6 +435,14 @@ Dialog {
       if (tm.tType === "value_map") tObj.map = tm.tMap
       if (tm.tType === "round") tObj.decimal_places = tm.tDecimal
       if (tm.tOptional) tObj.optional = true
+      if (tm.tType === "replace") {
+        tObj.search = tm.tSearch
+        tObj.replace = tm.tReplace
+      }
+      if (tm.tType === "regex_replace") {
+        tObj.pattern = tm.tPattern
+        tObj.replace = tm.tReplace
+      }
       tArr.push(tObj)
     }
     sourceData.transformations = tArr.length > 0 ? tArr : undefined

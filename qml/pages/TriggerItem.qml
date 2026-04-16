@@ -30,12 +30,25 @@ Item {
 
   function getMetadataText() {
     var typeStr = itemData.type ? itemData.type.toUpperCase() : "TRIGGER"
-    if (itemData.type === "timer" && itemData.interval) {
-      if (itemData.interval != "0s") return typeStr + " • Every " + itemData.interval
+    if (itemData.type === "timer") {
+      if (hasSchedule()) return typeStr + " • Schedule"
+      if (itemData.interval && itemData.interval != "0s") return typeStr + " • Every " + itemData.interval
+      
       return typeStr + " • Once "
     }
+
     if (itemData.topic) return typeStr + " • " + itemData.topic
     return typeStr
+  }
+
+  function hasSchedule() {
+    return (itemData.schedule_seconds && itemData.schedule_seconds.length > 0) ||
+          (itemData.schedule_minutes && itemData.schedule_minutes.length > 0) ||
+          (itemData.schedule_hours && itemData.schedule_hours.length > 0) ||
+          (itemData.schedule_days && itemData.schedule_days.length > 0) ||
+          (itemData.schedule_weekdays && itemData.schedule_weekdays.length > 0) ||
+          (itemData.schedule_months && itemData.schedule_months.length > 0) ||
+          (itemData.schedule_years && itemData.schedule_years.length > 0);
   }
 
   Rectangle {

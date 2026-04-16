@@ -26,6 +26,7 @@ ApplicationWindow {
   property var states
   property var settings
   property bool busy
+  property bool connected
   property string dynamic_page: "states"
 
   PythonHandler {

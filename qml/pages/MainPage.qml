@@ -15,8 +15,7 @@ Page {
   TabView {
     id: tabs
     anchors.fill: parent
-    currentIndex: app.settings && app.settings.startup_tab ? parseInt(app.settings.startup_tab) : 1
-
+  
     header: TabBar {
       model: tab_model
     }
@@ -96,6 +95,11 @@ Page {
   }
 
   Component.onCompleted: {
+    if (app.settings && app.settings.startup_tab !== undefined) {
+      tabs.currentIndex = parseInt(app.settings.startup_tab)
+    } else {
+      tabs.currentIndex = 1
+    }
   }
 
   Component.onDestruction: {

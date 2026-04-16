@@ -2,7 +2,7 @@ import QtQuick 2.2
 import Sailfish.Silica 1.0
 
 Page {
-  id: actionPickerPage
+  id: stringPickerPage
 
   signal selected(string type, string id)
 
@@ -16,32 +16,37 @@ Page {
 
     Component.onCompleted: {
       combinedModel.append({ 
-        "name": "set_state()", 
-        "id": "set_state", 
+        "name": "uppercase()", 
+        "id": "uppercase", 
         "type": "function" 
       })
       combinedModel.append({ 
-        "name": "set_variable()", 
-        "id": "set_variable", 
+        "name": "lowercase()", 
+        "id": "lowercase", 
         "type": "function" 
       })
-      
-      if (app && app.actions) {
-        for (var i = 0; i < app.actions.length; i++) {
-          combinedModel.append({ 
-            "name": app.actions[i].name, 
-            "id": app.actions[i].id, 
-            "type": "action" 
-          })
-        }
-      }
+      combinedModel.append({ 
+        "name": "trim()", 
+        "id": "trim", 
+        "type": "function" 
+      })
+      combinedModel.append({ 
+        "name": "replace()", 
+        "id": "replace", 
+        "type": "function" 
+      })
+      combinedModel.append({ 
+        "name": "regex_replace()", 
+        "id": "regex_replace", 
+        "type": "function" 
+      })
     }
 
     delegate: ListItem {
       width: parent.width
 
       onClicked: {
-        actionPickerPage.selected(model.type, model.id)
+        stringPickerPage.selected(model.type, model.id)
         pageStack.pop()
       }
 
@@ -50,7 +55,7 @@ Page {
         anchors.leftMargin: Theme.horizontalPageMargin
         anchors.verticalCenter: parent.verticalCenter
         text: model.name
-        color: (highlighted || model.id === actionPickerPage.selectedId) ? Theme.highlightColor : Theme.primaryColor
+        color: (highlighted || model.id === stringPickerPage.selectedId) ? Theme.highlightColor : Theme.primaryColor
       }
     }
   }
