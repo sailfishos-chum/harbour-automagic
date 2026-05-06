@@ -6,6 +6,7 @@ Page {
   id: main_page
 
   property string dynamicPage: app.dynamic_page
+  property bool startup_tab_set: false
 
   onDynamicPageChanged: {
     var newTitle = dynamicPage === "logs" ? "Log" : "States"
@@ -95,13 +96,26 @@ Page {
   }
 
   Component.onCompleted: {
+    app.signal_settings_changed.connect(settings_changed)
+
     if (app.settings && app.settings.startup_tab !== undefined) {
       tabs.currentIndex = parseInt(app.settings.startup_tab)
+      startup_tab_set = true;
     } else {
       tabs.currentIndex = 1
     }
   }
 
   Component.onDestruction: {
+    app.signal_settings_changed.disconnect(settings_changed)
+  }
+
+  function settings_changed(settings) {
+    if (!startup_tab_set) {
+      if (app.settings && app.settings.startup_tab !== undefined) {
+        tabs.currentIndex = parseInt(app.settings.startup_tab)
+        startup_tab_set = true;
+      } 
+    }
   }
 }

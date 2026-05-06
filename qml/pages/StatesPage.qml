@@ -14,6 +14,14 @@ Item {
         onClicked: pageStack.push(Qt.resolvedUrl("SettingsDialog.qml"))
       }
       MenuItem {
+        text: "Export"
+        onClicked: pageStack.push(Qt.resolvedUrl("ExportDialog.qml"))
+      }
+      MenuItem {
+        text: "Import"
+        onClicked: pageStack.push(Qt.resolvedUrl("ImportPage.qml"))
+      }
+      MenuItem {
         text: "Reload Daemon"
         onClicked: python.daemon_reload()
       }

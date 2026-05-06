@@ -36,20 +36,63 @@ class Automagic:
       key=lambda x: str(x.get("name") or "").lower()
     )
 
+  def _settings_defaults(self, settings: Dict[str, Any]) -> Dict[str, Any]:
+    home = os.environ.get('HOME', '')
+    settings.setdefault('export_base_path', os.path.join(home, 'Documents'))
+    return settings
+
   def load_data(self) -> Dict[str, Any]:
     print('Automagic loading data')
-    
+
     secret = self.loadVersioned("secret.json", {})
     if isinstance(secret, dict):
       self.secret = secret.get("shared_secret", "automagicd")
 
+    settings = self.loadVersioned("settings.json", {})
+    if not isinstance(settings, dict):
+      settings = {}
+    self._settings_defaults(settings)
+
     return {
-      "settings": self.loadVersioned("settings.json", {}),
+      "settings": settings,
       "data_sources": self._sort_items(self.loadVersioned("data_sources.json")),
       "flows": self._sort_items(self.loadVersioned("flows.json")),
       "actions": self._sort_items(self.loadVersioned("actions.json")),
       "value_maps": self.loadVersioned("value_maps.json", {})
     }
+
+  def load_import_folder(self, folder_path: str) -> Dict[str, Any]:
+    files = {
+      "flows.json":       ("flows",        []),
+      "data_sources.json":("data_sources", []),
+      "actions.json":     ("actions",      []),
+      "value_maps.json":  ("value_maps",   {}),
+    }
+    result = {}
+    for filename, (key, default) in files.items():
+      path = os.path.join(folder_path, filename)
+      if not os.path.exists(path):
+        continue
+      try:
+        with open(path, 'r') as f:
+          content = json.load(f)
+          result[key] = content.get("data", default)
+      except Exception as e:
+        print(f"Error loading {filename} for import: {e}")
+        pyotherside.send("error", "automagic", "load_import_folder", str(e))
+        return {}
+
+    path = os.path.join(folder_path, "info.json")
+    if os.path.exists(path):
+      try:
+        with open(path, 'r') as f:
+          result['info'] = json.load(f)
+      except Exception as e:
+        print(f"Error loading info for import: {e}")
+        pyotherside.send("error", "automagic", "load_import_folder", str(e))
+        return {}
+
+    return result
 
   def ensure_configs_exist(self):
     print('Automagic checking config directory and bootstrap files')

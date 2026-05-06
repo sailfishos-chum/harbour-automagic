@@ -16,6 +16,14 @@ Item {
         onClicked: pageStack.push(Qt.resolvedUrl("SettingsDialog.qml"))
       }
       MenuItem {
+        text: "Export"
+        onClicked: pageStack.push(Qt.resolvedUrl("ExportDialog.qml"))
+      }
+      MenuItem {
+        text: "Import"
+        onClicked: pageStack.push(Qt.resolvedUrl("ImportPage.qml"))
+      }
+      MenuItem {
         text: "Reload Daemon"
         onClicked: python.daemon_reload()
       }
@@ -64,6 +72,35 @@ Item {
     }
 
     VerticalScrollDecorator {}
+  }
+
+  Rectangle {
+    width: parent.width
+    height: Theme.itemSizeMedium
+    anchors.bottom: parent.bottom
+    color: Theme.rgba(Theme.highlightBackgroundColor, 0.5)
+    opacity: app.connected ? 0.0 : 1.0
+    visible: opacity > 0
+
+    Behavior on opacity { FadeAnimation {} }
+
+    Row {
+      anchors.centerIn: parent
+      spacing: Theme.paddingMedium
+
+      Icon {
+        source: "image://theme/icon-m-warning"
+        color: Theme.primaryColor
+        anchors.verticalCenter: parent.verticalCenter
+      }
+
+      Label {
+        text: "Daemon disconnected"
+        color: Theme.primaryColor
+        font.pixelSize: Theme.fontSizeSmall
+        anchors.verticalCenter: parent.verticalCenter
+      }
+    }
   }
 
   Component.onCompleted: {

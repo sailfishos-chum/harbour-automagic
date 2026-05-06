@@ -1,5 +1,6 @@
 import QtQuick 2.2
 import Sailfish.Silica 1.0
+import Sailfish.Pickers 1.0
 
 Dialog {
   id: settings_dialog
@@ -7,6 +8,7 @@ Dialog {
   property string selectedMode: "states"
   property string startupTab: "1"
   property int logLimit: 100
+  property string exportBasePath: ""
 
   SilicaFlickable {
     anchors.fill: parent
@@ -20,22 +22,7 @@ Dialog {
         title: "Settings"
       }
 
-      ComboBox {
-        id: view_combo
-        width: parent.width
-        label: "Dynamic Tab View"
-        
-        menu: ContextMenu {
-          MenuItem {
-            text: "States"
-            onClicked: selectedMode = "states"
-          }
-          MenuItem {
-            text: "Log"
-            onClicked: selectedMode = "logs"
-          }
-        }
-      }
+      SectionHeader { text: "Tabs" }
 
       ComboBox {
         id: startup_combo
@@ -62,6 +49,25 @@ Dialog {
         }
       }
 
+      ComboBox {
+        id: view_combo
+        width: parent.width
+        label: "Dynamic Tab View"
+        
+        menu: ContextMenu {
+          MenuItem {
+            text: "States"
+            onClicked: selectedMode = "states"
+          }
+          MenuItem {
+            text: "Log"
+            onClicked: selectedMode = "logs"
+          }
+        }
+      }
+
+      SectionHeader { text: "Log" }
+
       Slider {
         id: log_slider
         width: parent.width
@@ -72,6 +78,23 @@ Dialog {
         value: logLimit
         valueText: value + " lines"
         onValueChanged: logLimit = value
+      }
+
+      SectionHeader { text: "Export" }
+
+      ValueButton {
+        width: parent.width
+        label: "Export Path"
+        value: settings_dialog.exportBasePath
+        onClicked: pageStack.push(folderPickerComponent)
+      }
+
+      Component {
+        id: folderPickerComponent
+        FolderPickerPage {
+          dialogTitle: "Export Path"
+          onSelectedPathChanged: settings_dialog.exportBasePath = selectedPath
+        }
       }
     }
   }
@@ -88,6 +111,8 @@ Dialog {
     if (s.log_limit !== undefined) {
       logLimit = s.log_limit
     }
+
+    exportBasePath = s.export_base_path || ""
   }
 
   onAccepted: {
@@ -96,6 +121,7 @@ Dialog {
     s.dynamic_page = selectedMode
     s.startup_tab = startupTab
     s.log_limit = logLimit
+    s.export_base_path = exportBasePath
 
     app.settings = s
     app.dynamic_page = selectedMode

@@ -126,7 +126,7 @@ Page {
 
       menu: ContextMenu {
         MenuItem {
-          text: "Import Example"
+          text: "Import"
           onClicked: importExample(modelData)
         }
       }
@@ -174,115 +174,103 @@ Page {
   }
 
   function importExample(example) {
-    var newActions = []
-    var newSources = []
-    var newFlows = []
-    var newValueMaps = {}
-
-    if (example.actions && example.actions.data) {
-      for (var i = 0; i < example.actions.data.length; i++) {
-        var act = example.actions.data[i]
-        var existingName = ""
-        for (var a = 0; a < app.actions.length; a++) {
-          if (app.actions[a].id === act.id) {
-            existingName = app.actions[a].name || app.actions[a].id
-            break
-          }
-        }
-        if (existingName !== "") {
-          app.signal_error('LibraryPage', "importExample", 'Action already exists as: ' + existingName)
-          return
-        }
-        newActions.push(act)
-      }
+    var data = {
+      flows:        (example.flows        && example.flows.data)        ? example.flows.data        : [],
+      data_sources: (example.data_sources && example.data_sources.data) ? example.data_sources.data : [],
+      actions:      (example.actions      && example.actions.data)      ? example.actions.data      : [],
+      value_maps:   (example.value_maps   && example.value_maps.data)   ? example.value_maps.data   : {}
     }
 
-    if (example.data_sources && example.data_sources.data) {
-      for (var j = 0; j < example.data_sources.data.length; j++) {
-        var src = example.data_sources.data[j]
-        var existingSrcName = ""
-        for (var s = 0; s < app.data_sources.length; s++) {
-          if (app.data_sources[s].id === src.id) {
-            existingSrcName = app.data_sources[s].name || app.data_sources[s].id
-            break
-          }
-        }
-        if (existingSrcName !== "") {
-          app.signal_error('LibraryPage', "importExample", 'Source already exists as: ' + existingSrcName)
-          return
-        }
-        newSources.push(src)
-      }
+    var conflicts = _findConflicts(data)
+
+    if (conflicts.length > 0) {
+      var dialog = pageStack.push(Qt.resolvedUrl("ConflictDialog.qml"), {
+        "importData": data,
+        "conflictList": conflicts
+      })
+      dialog.accepted.connect(function() {
+        _applyImport(dialog.importData, true)
+      })
+    } else {
+      _applyImport(data, false)
     }
+  }
 
-    if (example.flows && example.flows.data) {
-      for (var k = 0; k < example.flows.data.length; k++) {
-        var flw = example.flows.data[k]
-        var existingFlwName = ""
-        for (var f = 0; f < app.flows.length; f++) {
-          if (app.flows[f].id === flw.id) {
-            existingFlwName = app.flows[f].name || app.flows[f].id
-            break
-          }
-        }
-        if (existingFlwName !== "") {
-          app.signal_error('LibraryPage', "importExample", 'Flow ID already exists as: ' + existingFlwName)
-          return
-        }
-        newFlows.push(flw)
-      }
-    }
+  function _findConflicts(data) {
+    var conflicts = []
 
-    if (example.value_maps && example.value_maps.data) {
-      var maps = example.value_maps.data
-      for (var mapKey in maps) {
-        if (app.value_maps[mapKey] !== undefined) {
-          app.signal_error('LibraryPage', "importExample", 'Value Map already exists: ' + mapKey)
-          return
-        }
-        newValueMaps[mapKey] = maps[mapKey]
-      }
-    }
+    var flows = data.flows || []
+    for (var i = 0; i < flows.length; i++)
+      for (var fi = 0; fi < app.flows.length; fi++)
+        if (app.flows[fi].id === flows[i].id) { conflicts.push("Flow: " + (flows[i].name || flows[i].id)); break }
 
-    console.debug("import data_sources:", newSources.length, "flows:", newFlows.length, "actions:", newActions.length, "maps:", Object.keys(newValueMaps).length)
+    var sources = data.data_sources || []
+    for (var j = 0; j < sources.length; j++)
+      for (var si = 0; si < app.data_sources.length; si++)
+        if (app.data_sources[si].id === sources[j].id) { conflicts.push("Source: " + (sources[j].name || sources[j].id)); break }
 
-    if (newActions.length > 0) {
-      var actList = app.actions
-      for (var na = 0; na < newActions.length; na++) { actList.push(newActions[na]) }
-      app.actions = []
-      app.actions = actList
-      python.save_actions()
-    }
+    var actions = data.actions || []
+    for (var k = 0; k < actions.length; k++)
+      for (var ai = 0; ai < app.actions.length; ai++)
+        if (app.actions[ai].id === actions[k].id) { conflicts.push("Action: " + (actions[k].name || actions[k].id)); break }
 
-    if (newSources.length > 0) {
-      var srcList = app.data_sources
-      for (var ns = 0; ns < newSources.length; ns++) { srcList.push(newSources[ns]) }
-      app.data_sources = []
-      app.data_sources = srcList
-      python.save_data_sources()
-    }
+    var maps = data.value_maps || {}
+    for (var key in maps)
+      if (app.value_maps[key] !== undefined) conflicts.push("Value Map: " + key)
 
-    if (newFlows.length > 0) {
+    return conflicts
+  }
+
+  function _applyImport(data, overwrite) {
+    var flows = data.flows || []
+    var sources = data.data_sources || []
+    var actions = data.actions || []
+    var maps = data.value_maps || {}
+
+    if (flows.length > 0) {
       var flwList = app.flows
-      for (var nf = 0; nf < newFlows.length; nf++) { flwList.push(newFlows[nf]) }
-      app.flows = []
-      app.flows = flwList
+      for (var i = 0; i < flows.length; i++) {
+        if (overwrite)
+          for (var fi = flwList.length - 1; fi >= 0; fi--)
+            if (flwList[fi].id === flows[i].id) { flwList.splice(fi, 1); break }
+        flwList.push(flows[i])
+      }
+      app.flows = []; app.flows = flwList
       python.save_flows()
     }
 
-    if (Object.keys(newValueMaps).length > 0) {
-      var currentMaps = app.value_maps
-      for (var key in newValueMaps) {
-        currentMaps[key] = newValueMaps[key]
+    if (sources.length > 0) {
+      var srcList = app.data_sources
+      for (var j = 0; j < sources.length; j++) {
+        if (overwrite)
+          for (var si = srcList.length - 1; si >= 0; si--)
+            if (srcList[si].id === sources[j].id) { srcList.splice(si, 1); break }
+        srcList.push(sources[j])
       }
-      app.value_maps = {}
-      app.value_maps = currentMaps
+      app.data_sources = []; app.data_sources = srcList
+      python.save_data_sources()
+    }
+
+    if (actions.length > 0) {
+      var actList = app.actions
+      for (var k = 0; k < actions.length; k++) {
+        if (overwrite)
+          for (var ai = actList.length - 1; ai >= 0; ai--)
+            if (actList[ai].id === actions[k].id) { actList.splice(ai, 1); break }
+        actList.push(actions[k])
+      }
+      app.actions = []; app.actions = actList
+      python.save_actions()
+    }
+
+    if (Object.keys(maps).length > 0) {
+      var currentMaps = app.value_maps
+      for (var key in maps) currentMaps[key] = maps[key]
+      app.value_maps = {}; app.value_maps = currentMaps
       python.save_value_maps()
     }
 
-    if (newActions.length > 0 || newSources.length > 0 || newFlows.length > 0 || Object.keys(newValueMaps).length > 0) {
-      python.load_data()
-    }
+    python.load_data()
   }
 
   Component.onCompleted: fetchLibrary()
